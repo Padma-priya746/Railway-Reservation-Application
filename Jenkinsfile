@@ -1,7 +1,11 @@
 pipeline {
     agent any
     environment {
-        SEMGREP_APP_TOKEN = credentials('semgrep-token') // Ensure you have the Semgrep API token stored in Jenkins credentials
+        SEMGREP_APP_TOKEN = credentials('semgrep-token') // Ensure 'semgrep-token' matches the ID you used
+    }
+    tools {
+        jdk 'Java11' // Ensure this matches the JDK installation name in Jenkins
+        maven 'maven3' // Ensure this matches the Maven installation name in Jenkins
     }
     stages {
         stage('Checkout') {
@@ -9,29 +13,39 @@ pipeline {
                 git 'https://github.com/Padma-priya746/Railway-Reservation-Application.git'
             }
         }
+        stage('Build') {
+            steps {
+                dir('path/to/your/project') { // Change this to the actual path where pom.xml is located
+                    sh 'mvn clean compile' // Compile the project using Maven
+                }
+            }
+        }
         stage('Install Semgrep') {
             steps {
-                // Install Semgrep using pip
-                sh 'pip install semgrep'
+                sh 'pip install semgrep' // Install Semgrep using pip
             }
         }
         stage('Run Semgrep') {
             steps {
-                // Run Semgrep scan
-                sh 'semgrep --config auto --auth-token $SEMGREP_APP_TOKEN'
+                sh 'semgrep --config auto --auth-token $SEMGREP_APP_TOKEN > semgrep-output.txt' // Run Semgrep scan
             }
         }
         stage('Archive Results') {
             steps {
-                // Archive the Semgrep results
-                archiveArtifacts artifacts: '**/semgrep-output.txt', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'semgrep-output.txt', allowEmptyArchive: true // Archive the Semgrep results
             }
         }
     }
     post {
         always {
-            // Publish Semgrep results
-            sh 'cat semgrep-output.txt'
+            script {
+                if (fileExists('semgrep-output.txt')) {
+                    echo 'Semgrep scan completed, displaying results:'
+                    sh 'cat semgrep-output.txt'
+                } else {
+                    echo 'No Semgrep output found.'
+                }
+            }
         }
     }
 }
